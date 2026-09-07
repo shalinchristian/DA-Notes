@@ -1,0 +1,420 @@
+# ============================================================
+# MOVIE TICKET BOOKING ANALYTICS — PART A
+# NumPy, Pandas, Matplotlib
+# ============================================================
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+pd.set_option('display.max_columns', None)
+
+# ============================================================
+# Q1 — DATA EXPLORATION & OBSERVATION
+# ============================================================
+
+# Load the three CSV files
+df1 = pd.read_csv('Movie_Ticket_Assignment3_CSV1_Movies_Messy_500.csv')
+df2 = pd.read_csv('Movie_Ticket_Assignment3_CSV2_Shows_Messy_500.csv')
+df3 = pd.read_csv('Movie_Ticket_Assignment3_CSV3_Bookings_Messy_500.csv')
+
+# Basic exploration of all three datasets
+for name, df in [('Movies', df1), ('Shows', df2), ('Bookings', df3)]:
+
+    print(f"\n===== {name} =====")
+
+    # Number of rows and columns
+    print("Shape:", df.shape)
+
+    # Data types and non-null information
+    df.info()
+
+    # Check missing values in each column
+    print("\nMissing values:")
+    print(df.isnull().sum())
+
+    # Check duplicate rows
+    print("Duplicate rows:", df.duplicated().sum())
+
+# Check categorical values
+print("\n===== Categorical Values =====")
+
+print("\nMovie Genres:")
+print(df1['Genre'].unique())
+
+print("\nMovie Languages:")
+print(df1['Language'].unique())
+
+print("\nMovie Certificates:")
+print(df1['Certificate'].unique())
+
+print("\nShow Types:")
+print(df2['Show_Type'].unique())
+
+print("\nPayment Modes:")
+print(df3['Payment_Mode'].unique())
+
+print("\nBooking Status:")
+print(df3['Booking_Status'].unique())
+
+print("\nBooking Channels:")
+print(df3['Booking_Channel'].unique())
+
+# Numerical summary / ranges
+print("\n===== Numerical Summary =====")
+
+print("\nMovies:")
+print(df1.describe())
+
+print("\nShows:")
+print(df2.describe())
+
+print("\nBookings:")
+print(df3.describe())
+
+# Check relationships between the tables
+# Shows should contain valid Movie_IDs from Movies
+print(
+    "\nOrphan Movie_IDs in Shows:",
+    (~df2['Movie_ID'].isin(df1['Movie_ID'])).sum()
+)
+
+# Bookings should contain valid Show_IDs from Shows
+print(
+    "Orphan Show_IDs in Bookings:",
+    (~df3['Show_ID'].isin(df2['Show_ID'])).sum()
+)
+
+
+# ============================================================
+# Q2 — DATA PREPROCESSING & CLEANING
+# ============================================================
+
+# -------------------- Movies --------------------
+
+# Remove duplicate rows
+df1 = df1.drop_duplicates()
+
+# Clean categorical/string columns
+df1['Genre'] = df1['Genre'].str.strip().str.title()
+df1['Genre'] = df1['Genre'].fillna('Unknown')
+
+df1['Language'] = df1['Language'].str.strip().str.title()
+df1['Language'] = df1['Language'].fillna('Unknown')
+
+df1['Certificate'] = df1['Certificate'].str.strip().str.upper()
+
+df1['Movie_Status'] = df1['Movie_Status'].str.strip().str.title()
+
+# Fill missing director names
+df1['Director'] = df1['Director'].fillna('Unknown')
+
+# Replace invalid movie durations with NaN
+df1.loc[
+    (df1['Duration_Min'] < 30) | (df1['Duration_Min'] > 300),
+    'Duration_Min'
+] = np.nan
+
+# Replace invalid ratings with NaN
+df1.loc[
+    (df1['Rating'] < 0) | (df1['Rating'] > 10),
+    'Rating'
+] = np.nan
+
+# Replace negative production budgets with NaN
+df1.loc[
+    df1['Production_Budget'] < 0,
+    'Production_Budget'
+] = np.nan
+
+# Fill numerical missing values
+df1['Duration_Min'] = df1['Duration_Min'].fillna(
+    df1['Duration_Min'].median()
+)
+
+df1['Rating'] = df1['Rating'].fillna(
+    df1['Rating'].mean()
+)
+
+df1['Production_Budget'] = df1['Production_Budget'].fillna(
+    df1['Production_Budget'].median()
+)
+
+# Convert Release_Date into datetime
+df1['Release_Date'] = pd.to_datetime(
+    df1['Release_Date'],
+    errors='coerce'
+)
+
+
+# -------------------- Shows --------------------
+
+# Remove duplicate rows
+df2 = df2.drop_duplicates()
+
+# Clean categorical/string columns
+df2['Cinema_Name'] = df2['Cinema_Name'].str.strip().str.title()
+df2['Cinema_Name'] = df2['Cinema_Name'].fillna('Unknown')
+
+df2['City'] = df2['City'].str.strip().str.title()
+df2['City'] = df2['City'].fillna('Unknown')
+
+df2['Show_Type'] = df2['Show_Type'].str.strip().str.upper()
+
+# Replace invalid seat values with NaN
+df2.loc[
+    df2['Total_Seats'] < 0,
+    'Total_Seats'
+] = np.nan
+
+# Replace invalid ticket prices with NaN
+df2.loc[
+    df2['Ticket_Price'] < 0,
+    'Ticket_Price'
+] = np.nan
+
+# Fill numerical missing values
+df2['Total_Seats'] = df2['Total_Seats'].fillna(
+    df2['Total_Seats'].median()
+)
+
+df2['Ticket_Price'] = df2['Ticket_Price'].fillna(
+    df2['Ticket_Price'].median()
+)
+
+# Convert Show_Date into datetime
+df2['Show_Date'] = pd.to_datetime(
+    df2['Show_Date'],
+    errors='coerce'
+)
+
+# Remove Shows whose Movie_ID does not exist in Movies
+df2 = df2[df2['Movie_ID'].isin(df1['Movie_ID'])]
+
+
+# -------------------- Bookings --------------------
+
+# Remove duplicate rows
+df3 = df3.drop_duplicates()
+
+# Clean categorical/string columns
+df3['Payment_Mode'] = df3['Payment_Mode'].str.strip().str.title()
+df3['Payment_Mode'] = df3['Payment_Mode'].fillna('Unknown')
+
+df3['Booking_Status'] = df3['Booking_Status'].str.strip().str.title()
+
+df3['Booking_Channel'] = df3['Booking_Channel'].str.strip().str.title()
+df3['Booking_Channel'] = df3['Booking_Channel'].fillna('Unknown')
+
+df3['Customer_Name'] = df3['Customer_Name'].fillna('Unknown')
+
+# Replace invalid ticket counts with NaN
+df3.loc[
+    df3['Tickets'] <= 0,
+    'Tickets'
+] = np.nan
+
+# Fill missing tickets with median
+df3['Tickets'] = df3['Tickets'].fillna(
+    df3['Tickets'].median()
+)
+
+# Correct invalid customer ages
+# Valid age assumed between 1 and 100 for this practical dataset
+df3.loc[
+    (df3['Customer_Age'] < 1) | (df3['Customer_Age'] > 100),
+    'Customer_Age'
+] = np.nan
+
+# Fill missing customer ages with median
+df3['Customer_Age'] = df3['Customer_Age'].fillna(
+    df3['Customer_Age'].median()
+)
+
+# Missing discount treated as zero
+df3['Discount'] = df3['Discount'].fillna(0)
+
+# Convert Booking_Date into datetime
+df3['Booking_Date'] = pd.to_datetime(
+    df3['Booking_Date'],
+    errors='coerce'
+)
+
+# Remove bookings whose Show_ID does not exist in Shows
+df3 = df3[df3['Show_ID'].isin(df2['Show_ID'])]
+
+print(
+    "\nCleaning completed."
+)
+
+print(
+    "Shapes after cleaning:",
+    df1.shape,
+    df2.shape,
+    df3.shape
+)
+
+
+# ============================================================
+# Q3 — CLEANED DATA VALIDATION
+# ============================================================
+
+print("\n===== VALIDATION =====")
+
+# Check missing values after cleaning
+print("\nMissing values after cleaning — Movies:")
+print(df1.isnull().sum())
+
+print("\nMissing values after cleaning — Shows:")
+print(df2.isnull().sum())
+
+print("\nMissing values after cleaning — Bookings:")
+print(df3.isnull().sum())
+
+# Check duplicates after cleaning
+print("\nDuplicate rows:")
+print("Movies:", df1.duplicated().sum())
+print("Shows:", df2.duplicated().sum())
+print("Bookings:", df3.duplicated().sum())
+
+# Check categorical consistency
+print("\nGenre values:")
+print(df1['Genre'].unique())
+
+print("\nLanguage values:")
+print(df1['Language'].unique())
+
+print("\nShow Type values:")
+print(df2['Show_Type'].unique())
+
+print("\nPayment Mode values:")
+print(df3['Payment_Mode'].unique())
+
+print("\nBooking Status values:")
+print(df3['Booking_Status'].unique())
+
+print("\nBooking Channel values:")
+print(df3['Booking_Channel'].unique())
+
+# Check numerical ranges
+print("\nNumerical ranges:")
+
+print(
+    "Duration_Min:",
+    df1['Duration_Min'].min(),
+    "-",
+    df1['Duration_Min'].max()
+)
+
+print(
+    "Rating:",
+    df1['Rating'].min(),
+    "-",
+    df1['Rating'].max()
+)
+
+print(
+    "Production_Budget:",
+    df1['Production_Budget'].min(),
+    "-",
+    df1['Production_Budget'].max()
+)
+
+print(
+    "Total_Seats:",
+    df2['Total_Seats'].min(),
+    "-",
+    df2['Total_Seats'].max()
+)
+
+print(
+    "Ticket_Price:",
+    df2['Ticket_Price'].min(),
+    "-",
+    df2['Ticket_Price'].max()
+)
+
+print(
+    "Customer_Age:",
+    df3['Customer_Age'].min(),
+    "-",
+    df3['Customer_Age'].max()
+)
+
+print(
+    "Tickets:",
+    df3['Tickets'].min(),
+    "-",
+    df3['Tickets'].max()
+)
+
+# Check date column data types
+print("\nDate column data types:")
+print("Release_Date:", df1['Release_Date'].dtype)
+print("Show_Date:", df2['Show_Date'].dtype)
+print("Booking_Date:", df3['Booking_Date'].dtype)
+
+# Check referential integrity again
+print(
+    "\nOrphan Movie_IDs in Shows:",
+    (~df2['Movie_ID'].isin(df1['Movie_ID'])).sum()
+)
+
+print(
+    "Orphan Show_IDs in Bookings:",
+    (~df3['Show_ID'].isin(df2['Show_ID'])).sum()
+)
+
+
+# ============================================================
+# Q4 — MATPLOTLIB-BASED VALIDATION
+# ============================================================
+
+# 1. Rating distribution
+plt.hist(df1['Rating'], bins=20, edgecolor='black')
+plt.title('Rating Distribution')
+plt.xlabel('Rating')
+plt.ylabel('Frequency')
+plt.show()
+
+# 2. Duration spread using boxplot
+plt.boxplot(df1['Duration_Min'])
+plt.title('Duration_Min Spread')
+plt.ylabel('Duration (Minutes)')
+plt.show()
+
+# 3. Number of movies per genre
+genre_count = df1['Genre'].value_counts()
+
+plt.bar(
+    genre_count.index,
+    genre_count.values
+)
+plt.title('Movies per Genre')
+plt.xlabel('Genre')
+plt.ylabel('Number of Movies')
+plt.xticks(rotation=45)
+plt.show()
+
+# 4. Tickets vs Final Amount
+plt.scatter(
+    df3['Tickets'],
+    df3['Final_Amount'],
+    alpha=0.5
+)
+plt.title('Tickets vs Final Amount')
+plt.xlabel('Tickets')
+plt.ylabel('Final Amount')
+plt.show()
+
+
+# ============================================================
+# Q5 — EXPORT CLEANED DATA
+# ============================================================
+
+# Save cleaned datasets as separate CSV files
+df1.to_csv('Movies_Cleaned.csv', index=False)
+df2.to_csv('Shows_Cleaned.csv', index=False)
+df3.to_csv('Bookings_Cleaned.csv', index=False)
+
+print("\nAll three cleaned CSV files exported successfully.")

@@ -1,0 +1,55 @@
+# 1. Histogram — Rating Distribution
+
+plt.hist(df1['Rating'], bins=20, color='skyblue', edgecolor='black')
+plt.title('Rating Distribution')
+plt.xlabel('Rating')
+plt.ylabel('Count')
+plt.show()
+
+
+# 2. Boxplot — Duration_Min Outlier Check
+
+plt.boxplot(df1['Duration_Min'])
+plt.title('Duration_Min Outlier Check')
+plt.ylabel('Duration (Minutes)')
+plt.show()
+
+
+# 3. Bar Graph — Movies per Genre
+
+df1['Genre'].value_counts().plot(kind='bar', color='orange')
+plt.title('Movies per Genre')
+plt.xlabel('Genre')
+plt.ylabel('Count')
+plt.show()
+
+
+# 4. Scatter Plot — Tickets vs Final Amount
+
+plt.scatter(df3['Tickets'], df3['Final_Amount'], alpha=0.5, color='green')
+plt.title('Tickets vs Final Amount')
+plt.xlabel('Tickets')
+plt.ylabel('Final Amount')
+plt.show()
+
+
+# 5. Line Graph — Total Booking Amount Over Time
+
+daily = df3.groupby(df3['Booking_Date'].dt.date)['Final_Amount'].sum()
+
+daily.plot(kind='line', color='purple')
+plt.title('Total Booking Amount Over Time')
+plt.xlabel('Date')
+plt.ylabel('Total Amount')
+plt.show()
+
+
+# 6. Pie Chart — Payment Mode Share
+
+df3['Payment_Mode'].value_counts().plot(
+    kind='pie',
+    autopct='%1.0f%%'
+)
+plt.title('Payment Mode Share')
+plt.ylabel('')
+plt.show()
